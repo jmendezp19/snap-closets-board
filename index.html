@@ -2,10 +2,169 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<style>body { margin: 0; }</style>
 <title>Tablero Snap Closets</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI",system-ui,sans-serif;background:#F4F3EF;color:#2A211D}p{font-size:18px;padding:24px;text-align:center}</style>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap">
+<style>
+/* Layout: one working board. Summary strip on top, the team as a grid of cards, and the owner's queue beside it. */
+:root {
+  --bg: #F4F3EF; --surface: #FFFFFF; --ink: #2A211D; --muted: #6B5F58; --line: #DDD9D2;
+  --accent: #E15C31; --accent-ink: #2A211D;
+  --ok: #1F6B4C; --ok-bg: #E0F0E8; --wait: #8A4F00; --wait-bg: #FBEACD;
+  --idle: #5F5751; --idle-bg: #ECEAE5; --bad: #A3231C; --bad-bg: #F8DEDB;
+  --font: "Quicksand", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1B1613; --surface: #27201B; --ink: #F0EDE8; --muted: #B6ACA4; --line: #3B332D;
+  --accent: #E15C31; --accent-ink: #2A211D;
+  --ok: #86D3AD; --ok-bg: #1D382C; --wait: #F3C27C; --wait-bg: #432F0E;
+  --idle: #C5BEB7; --idle-bg: #342D28; --bad: #F3A39D; --bad-bg: #4A1F1C; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1B1613; --surface: #27201B; --ink: #F0EDE8; --muted: #B6ACA4; --line: #3B332D;
+  --accent: #E15C31; --accent-ink: #2A211D;
+  --ok: #86D3AD; --ok-bg: #1D382C; --wait: #F3C27C; --wait-bg: #432F0E;
+  --idle: #C5BEB7; --idle-bg: #342D28; --bad: #F3A39D; --bad-bg: #4A1F1C; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-weight: 500; font-size: 16px; line-height: 1.45; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 28px; }
+.brand { font-size: 13px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0; }
+h1 { font-size: 30px; font-weight: 700; margin: 4px 0 0; text-wrap: balance; }
+.updated { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.stat .label { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0; }
+.stat .value { font-size: 26px; font-weight: 700; margin: 2px 0 0; font-variant-numeric: tabular-nums; }
+.stat .note { font-size: 13px; color: var(--muted); margin: 2px 0 0; }
+.cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+h2 { font-size: 19px; font-weight: 700; margin: 0 0 12px; }
+.team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.card h3 { font-size: 17px; font-weight: 700; margin: 0; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.working { color: var(--ok); background: var(--ok-bg); }
+.pill.jorge { color: var(--wait); background: var(--wait-bg); }
+.pill.idle { color: var(--idle); background: var(--idle-bg); }
+.pill.blocked { color: var(--bad); background: var(--bad-bg); }
+.card dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; font-size: 14.5px; }
+.card dt { color: var(--muted); font-weight: 600; }
+.card dd { margin: 0; overflow-wrap: anywhere; }
+.queue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.queue li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.queue .what { margin: 0; font-size: 15px; font-weight: 600; }
+.queue .where { margin: 0; font-size: 13px; color: var(--muted); }
+.queue .where b { color: var(--ink); font-weight: 700; }
+.empty { color: var(--muted); }
+[hidden] { display: none !important; }
+.lock { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding-block: 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.lock form { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 28px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+.lock h1 { font-size: 24px; }
+.lock p { margin: 0; color: var(--muted); font-size: 15px; }
+.lock label { font-size: 14px; font-weight: 700; }
+.lock input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.lock input:focus-visible, .lock button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.lock button { font: inherit; font-weight: 700; padding: 10px 14px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.lock .msg { min-height: 1.4em; color: var(--bad); font-weight: 600; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .team { grid-template-columns: minmax(0, 1fr); } h1 { font-size: 25px; } }
+</style>
 </head>
-<body><p>Tablero en preparación.</p></body>
+<body>
+<div class="lock" id="lock">
+  <form id="lock-form" autocomplete="off">
+    <p class="brand">Snap Closets</p>
+    <h1>Tablero del equipo</h1>
+    <p>Escribe la clave para ver el estado del equipo.</p>
+    <label for="lock-pw">Clave</label>
+    <input id="lock-pw" type="password" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+    <p class="msg" id="lock-msg" role="status"></p>
+  </form>
+</div>
+
+<div class="wrap" id="board" hidden>
+  <div>
+    <p class="brand">Snap Closets</p>
+    <h1>Tablero del equipo</h1>
+    <p class="updated" id="updated">Cargando el estado del equipo…</p>
+  </div>
+  <section class="summary" aria-label="Resumen">
+    <div class="stat"><p class="label">Fase actual</p><p class="value" id="s-phase">—</p><p class="note" id="s-phase-note"></p></div>
+    <div class="stat"><p class="label">Trabajando ahora</p><p class="value" id="s-working">—</p><p class="note">agentes con tarea en curso</p></div>
+    <div class="stat"><p class="label">Esperan por ti</p><p class="value" id="s-jorge">—</p><p class="note">decisiones o respuestas tuyas</p></div>
+    <div class="stat"><p class="label">Decisiones registradas</p><p class="value" id="s-decisions">—</p><p class="note">desde el 23 de noviembre</p></div>
+  </section>
+  <div class="cols">
+    <section>
+      <h2>El equipo</h2>
+      <div class="team" id="team"></div>
+    </section>
+    <section>
+      <h2>Esperan por ti</h2>
+      <ul class="queue" id="queue"></ul>
+    </section>
+  </div>
+</div>
+<script>
+var STATES = { working: "Trabajando", jorge: "Esperando a Jorge", idle: "Esperando tareas", blocked: "Trabado" };
+var ORDER = { blocked: 0, jorge: 1, working: 2, idle: 3 };
+function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function row(dl, k, v) { dl.appendChild(el("dt", null, k)); dl.appendChild(el("dd", null, v)); }
+function render(d) {
+  document.getElementById("updated").textContent = "Actualizado: " + d.updated;
+  document.getElementById("s-phase").textContent = d.phase.name;
+  document.getElementById("s-phase-note").textContent = d.phase.note || "";
+  document.getElementById("s-working").textContent = d.agents.filter(function (a) { return a.state === "working"; }).length + " de " + d.agents.length;
+  document.getElementById("s-jorge").textContent = d.jorge.length;
+  document.getElementById("s-decisions").textContent = d.decisions;
+  var team = document.getElementById("team"); team.textContent = "";
+  d.agents.slice().sort(function (a, b) { return ORDER[a.state] - ORDER[b.state]; }).forEach(function (a) {
+    var c = el("article", "card"), h = el("header");
+    h.appendChild(el("h3", null, a.name));
+    h.appendChild(el("span", "pill " + a.state, STATES[a.state] || a.state));
+    c.appendChild(h);
+    var dl = el("dl");
+    row(dl, "Ahora", a.task); row(dl, "Espera", a.waiting); row(dl, "Falta", a.gap);
+    c.appendChild(dl); team.appendChild(c);
+  });
+  var q = document.getElementById("queue"); q.textContent = "";
+  if (!d.jorge.length) { q.appendChild(el("li", "empty", "Nada espera por ti ahora.")); }
+  d.jorge.forEach(function (j) {
+    var li = el("li"); li.appendChild(el("p", "what", j.what));
+    var w = el("p", "where", "Se responde en "); w.appendChild(el("b", null, j.where)); li.appendChild(w);
+    q.appendChild(li);
+  });
+}
+var PAYLOAD = {"v":1,"iter":600000,"salt":"vAtMhgV8MajOgsnBXlQP7w==","iv":"OyPoTEjHai6g4Asy","ct":"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"};
+function fromB64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+function toB64(u) { var s = ""; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+function deriveKey(pw) {
+  return crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"])
+    .then(function (k) { return crypto.subtle.deriveBits({ name: "PBKDF2", salt: fromB64(PAYLOAD.salt), iterations: PAYLOAD.iter, hash: "SHA-256" }, k, 256); })
+    .then(function (bits) { return new Uint8Array(bits); });
+}
+function openWith(raw) {
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"])
+    .then(function (k) { return crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(PAYLOAD.iv) }, k, fromB64(PAYLOAD.ct)); })
+    .then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
+}
+function show(d) { document.getElementById("lock").hidden = true; document.getElementById("board").hidden = false; render(d); }
+var saved = null;
+try { saved = sessionStorage.getItem("snap-board-key"); } catch (e) {}
+if (saved) { openWith(fromB64(saved)).then(show).catch(function () { try { sessionStorage.removeItem("snap-board-key"); } catch (e) {} }); }
+document.getElementById("lock-form").addEventListener("submit", function (ev) {
+  ev.preventDefault();
+  var msg = document.getElementById("lock-msg"), pw = document.getElementById("lock-pw").value;
+  if (!pw) { msg.textContent = "Escribe la clave."; return; }
+  msg.textContent = "Abriendo…";
+  deriveKey(pw).then(function (raw) {
+    return openWith(raw).then(function (d) { try { sessionStorage.setItem("snap-board-key", toB64(raw)); } catch (e) {} msg.textContent = ""; show(d); });
+  }).catch(function () { msg.textContent = "Clave incorrecta. Inténtalo de nuevo."; });
+});
+setInterval(function () { if (!document.getElementById("board").hidden) location.reload(); }, 300000);
+</script>
+</body>
 </html>
